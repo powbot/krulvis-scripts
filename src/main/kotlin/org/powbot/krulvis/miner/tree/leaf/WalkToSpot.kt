@@ -18,7 +18,7 @@ class WalkToSpot(script: Miner) : Leaf<Miner>(script, "Walking to spot") {
         val allTop = script.rockLocations.all { script.inTopFloorAreas(it) }
         script.mineDelay.forceFinish()
         if (locs.isEmpty()) {
-            script.log.warning("Script requires at least 1 rock location set in the Configuration")
+            script.log.warn("Script requires at least 1 rock location set in the Configuration")
             ScriptManager.stop()
         } else if (allTop
             && !script.inTopFloorAreas()
