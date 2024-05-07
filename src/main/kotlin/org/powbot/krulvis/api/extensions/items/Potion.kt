@@ -79,10 +79,6 @@ enum class Potion(
         return false
     }
 
-    fun isHighOnStamina(): Boolean {
-        val actual = Varpbits.varpbit(1575)
-        return (actual == 12582912 || actual == 4194304) || Movement.energyLevel() >= 60
-    }
 
     fun needsRestore(percentage: Int): Boolean {
         return when (this) {
@@ -120,6 +116,11 @@ enum class Potion(
     companion object {
 
         var antiFireTimer = Timer(1)
+
+        fun isHighOnStamina(): Boolean {
+            val actual = Varpbits.varpbit(1575)
+            return (actual == 12582912 || actual == 4194304) || Movement.energyLevel() >= 60
+        }
 
         fun getAbsorptionRemainder(): Int {
             val s = Varpbits.varpbit(1067) and 0x7fff

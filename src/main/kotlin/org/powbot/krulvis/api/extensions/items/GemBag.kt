@@ -9,8 +9,7 @@ object GemBag : Item {
 
     override val ids: IntArray = intArrayOf(GEM_BAG_CLOSED, GEM_BAG_OPEN)
 
-    var filled = false
-    var empty = false
+    var shouldEmpty = true
 
     override fun hasWith(): Boolean {
         return inInventory()
@@ -23,7 +22,7 @@ object GemBag : Item {
     @com.google.common.eventbus.Subscribe
     fun messageEvent(evt: MessageEvent) {
         if (evt.message == "The gem bag is now empty.") {
-            empty = true
+            shouldEmpty = false
         }
     }
 }

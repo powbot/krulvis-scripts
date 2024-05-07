@@ -12,7 +12,6 @@ import kotlin.math.roundToInt
 class Kill(script: Tempoross) : Leaf<Tempoross>(script, "Killing") {
 
     override fun execute() {
-        script.forcedShooting = false
         val spirit = script.getBossPool()
         val killing = me.animation() != -1 && (spirit?.distance()?.roundToInt() ?: 4) <= 3
 

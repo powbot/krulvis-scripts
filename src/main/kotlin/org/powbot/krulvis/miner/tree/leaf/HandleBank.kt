@@ -18,9 +18,9 @@ class HandleBank(script: Miner) : Leaf<Miner>(script, "Handle Bank") {
             script.waterskins = true
         }
         val gemBag = GemBag.getInvItem()
-        if (gemBag != null && !GemBag.empty) {
+        if (gemBag != null && GemBag.shouldEmpty) {
             if (gemBag.interact("Empty")) {
-                GemBag.empty = true
+                GemBag.shouldEmpty = false
             }
         } else if (!Inventory.emptyExcept(*Data.TOOLS)) {
             if (Bank.opened()) {

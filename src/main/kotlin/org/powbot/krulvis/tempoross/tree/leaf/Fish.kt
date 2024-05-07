@@ -32,10 +32,10 @@ class Fish(script: Tempoross) : Leaf<Tempoross>(script, "Fishing") {
             } else if (script.fishSpots.any { it.second.actions.last().destination.distance() <= 1 }) {
                 script.log.info("Nearby blocked fishing spot found that is blocked")
                 val blockedTile =
-                    script.fishSpots.filter { it.second.actions.last().destination.distance() <= 1 }
-                        .first().second.actions.last()
+                        script.fishSpots.filter { it.second.actions.last().destination.distance() <= 1 }
+                                .first().second.actions.last()
                 val fireOptional =
-                    Npcs.stream().name("Fire").within(blockedTile.destination, 2.0).nearest().findFirst()
+                        Npcs.stream().name("Fire").within(blockedTile.destination, 2.0).nearest().findFirst()
                 if (fireOptional.isPresent) {
                     script.log.info("Dousing nearby fire...")
                     val fire = fireOptional.get()
@@ -58,7 +58,7 @@ class Fish(script: Tempoross) : Leaf<Tempoross>(script, "Fishing") {
 
         if (currentSpot?.name() == "Fishing spot") {
             if (script.burningTiles.contains(me.tile())
-                || (currentSpot.id() != DOUBLE_FISH_ID && fishSpot.id() == DOUBLE_FISH_ID)
+                    || (currentSpot.id() != DOUBLE_FISH_ID && fishSpot.id() == DOUBLE_FISH_ID)
             ) {
                 script.log.info("Moving to double/save fish spot!")
                 fishAtSpot(fishSpot)
@@ -79,20 +79,22 @@ class Fish(script: Tempoross) : Leaf<Tempoross>(script, "Fishing") {
         }
     }
 
-    fun findSaveTile(tile: Tile): Tile? {
+    private fun findSaveTile(tile: Tile): Tile? {
         return tile.getWalkableNeighbor(diagonalTiles = true) {
             !script.burningTiles.contains(it)
         }
     }
 
-    fun fishAtSpot(spot: Npc) {
+    private fun fishAtSpot(spot: Npc) {
         if (walkAndInteract(spot, "Harpoon")) {
             waitFor(Random.nextInt(1000, 5000)) {
-                me.interacting().name() == "Fishing spot" || !spot.valid() || !script.waveTimer.isFinished()
+                me.interacting().name() == "Fishing spot" || !script.waveTimer.isFinished() || spot.hasLeftUs()
             }
         } else if (Movement.moving()) {
-            waitFor(long()) { spot.distance() <= 2 }
+            waitFor(long()) { spot.distance() <= 2 || spot.hasLeftUs() }
         }
     }
+
+    private fun Npc.hasLeftUs(): Boolean = Npcs.stream().at(tile()).name(name).isEmpty()
 
 }

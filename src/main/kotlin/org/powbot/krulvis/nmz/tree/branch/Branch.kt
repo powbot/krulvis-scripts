@@ -1,6 +1,7 @@
 package org.powbot.krulvis.nmz.tree.branch
 
 import org.powbot.api.rt4.Inventory
+import org.powbot.api.rt4.Item
 import org.powbot.api.rt4.Prayer
 import org.powbot.api.script.tree.Branch
 import org.powbot.api.script.tree.SimpleLeaf
@@ -35,8 +36,9 @@ class HasCorrectInventory(script: NightmareZone) : Branch<NightmareZone>(script,
     override val successComponent: TreeComponent<NightmareZone> = EnterDream(script)
 
     override fun validate(): Boolean {
-        val inv = Inventory.items()
-        return script.inventoryItems.all { wi -> wi.value == inv.filter { it.id == wi.key }.sumOf { it.stack } }
+        return true
+//        val inv = Inventory.items()
+//        return script.inventoryItems.all { wi -> wi.value == inv.filter { it.id == wi.key }.sumOf { it.stack } }
     }
 }
 
@@ -58,21 +60,23 @@ class ShouldDrinkOverload(script: NightmareZone) : Branch<NightmareZone>(script,
     }
 
     override fun validate(): Boolean {
-        return Potion.OVERLOAD.needsRestore(90)
+        return Potion.OVERLOAD.hasWith() && Potion.OVERLOAD.needsRestore(90)
     }
 }
 
 class ShouldRockCake(script: NightmareZone) : Branch<NightmareZone>(script, "Should RockCake") {
     override val failedComponent: TreeComponent<NightmareZone> = ShouldFlickRapidHeal(script)
     override val successComponent: TreeComponent<NightmareZone> = SimpleLeaf(script, "Eating Stone") {
-        val rockCake = Inventory.stream().id(7510).firstOrNull()
         val action = if (ATContext.currentHP() in 10 downTo 3) "Eat" else "Guzzle"
         rockCake?.interact(action)
     }
 
+    var rockCake: Item? = null
+
     override fun validate(): Boolean {
+        rockCake = Inventory.stream().id(7510).firstOrNull()
         val hp = ATContext.currentHP()
-        return hp > 1 && Potion.OVERLOAD.lastSip.getElapsedTime() > 10000
+        return rockCake != null && hp > 1 && Potion.OVERLOAD.lastSip.getElapsedTime() > 10000
     }
 }
 
@@ -86,7 +90,7 @@ class ShouldFlickRapidHeal(script: NightmareZone) : Branch<NightmareZone>(script
     }
 
     override fun validate(): Boolean {
-        return script.nextFlick.isFinished()
+        return ATContext.currentHP() <= 10 && Prayer.prayerPoints() > 0 && script.nextFlick.isFinished()
     }
 }
 
@@ -95,8 +99,6 @@ class ShouldDrinkAbsorption(script: NightmareZone) : Branch<NightmareZone>(scrip
     override val successComponent: TreeComponent<NightmareZone> = SimpleLeaf(script, "Drink absorption") {
         Potion.ABSORPTION.drink()
     }
-
-    var nextTop = 950
 
     override fun validate(): Boolean {
         return Potion.getAbsorptionRemainder() <= 50 && Potion.ABSORPTION.hasWith()

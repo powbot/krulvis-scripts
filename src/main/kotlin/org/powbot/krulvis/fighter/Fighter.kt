@@ -37,7 +37,7 @@ import kotlin.math.round
         name = "krul Fighter",
         description = "Fights anything, anywhere. Supports defender collecting.",
         author = "Krulvis",
-        version = "1.4.2",
+        version = "1.4.4",
         markdownFileName = "Fighter.md",
         scriptId = "d3bb468d-a7d8-4b78-b98f-773a403d7f6d",
         category = ScriptCategory.Combat,
@@ -48,7 +48,6 @@ import kotlin.math.round
                     "Warrior guild", "Collect defenders in the warrior guild",
                     optionType = OptionType.BOOLEAN, defaultValue = "false"
             ),
-
             ScriptConfiguration(
                     "Slayer", "Do slayer tasks?", optionType = OptionType.BOOLEAN, defaultValue = "false", visible = false
             ),
@@ -110,7 +109,7 @@ import kotlin.math.round
                     allowedValues = ["NEAREST", "ARDOUGNE_NORTH_BANK", "ARDOUGNE_SOUTH_BANK", "AL_KHARID_BANK", "BURTHORPE_BANK", "CANIFIS_BANK", "CATHERBY_BANK", "CASTLE_WARS_BANK", "DRAYNOR_BANK", "EDGEVILLE_BANK",
                         "FALADOR_WEST_BANK", "FALADOR_EAST_BANK", "FARMING_GUILD_85", "FARMING_GUILD_65", "FEROX_ENCLAVE", "GRAND_EXCHANGE", "HOSIDIUS_BEST_BANK_SPOT", "MISCELLANIA_BANK", "KOUREND_TOP_BUILDING", "LUMBRIDGE_TOP", "LUMBRIDGE_CASTLE_BANK",
                         "VARROCK_WEST_BANK", "VARROCK_EAST_BANK", "GNOME_STRONGHOLD_BANK", "FISHING_GUILD_BANK", "MINING_GUILD", "MOTHERLOAD_MINE", "MOTHERLOAD_MINE_DEPOSIT", "PRIFIDDINAS", "PORT_SARIM_DB", "SEERS_BANK",
-                        "SHAYZIEN_NORTH_CHEST", "SHAYZIEN_SOUTH_BOOTH", "SHANTAY_PASS_BANK", "SHILO_GEM_MINE", "TZHAAR_BANK", "WOODCUTTING_GUILD", "WARRIORS_GUILD", "WINTERTODT", "YANILLE_BANK"]
+                        "SHAYZIEN_NORTH_CHEST", "SHAYZIEN_SOUTH_BOOTH", "SHANTAY_PASS_BANK", "SHILO_GEM_MINE", "TZHAAR_BANK", "WOODCUTTING_GUILD", "WARRIORS_GUILD", "WINTERTODT", "YANILLE_BANK", "FOSSIL_ISLAND_CAMP"]
             ),
         ]
 )
@@ -370,7 +369,7 @@ class Fighter : ATScript() {
         }
     }
 
-    var lastTask = true
+    var lastTask = false
 
 }
 

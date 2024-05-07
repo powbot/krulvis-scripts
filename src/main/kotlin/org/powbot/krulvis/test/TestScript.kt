@@ -24,47 +24,47 @@ import org.powbot.mobile.drawing.Rendering
 
 @ScriptManifest(name = "Krul TestScriptu", version = "1.0.1", description = "", priv = true)
 @ScriptConfiguration.List(
-    [
-        ScriptConfiguration(
-            name = "rocks",
-            description = "Click som rocks",
-            optionType = OptionType.GAMEOBJECT_ACTIONS,
-        ),
-        ScriptConfiguration(
-            name = "Extra info",
-            description = "Here comes extra info \n new lines?",
-            optionType = OptionType.INFO
-        ),
-        ScriptConfiguration(
-            name = "tile",
-            description = "Get Tile?",
-            optionType = OptionType.TILE,
-            defaultValue = "{\"floor\":0,\"x\":1640,\"y\":3944,\"rendered\":true}"
-        ),
-        ScriptConfiguration(
-            name = "rocks1",
-            description = "NPCS?",
-            optionType = OptionType.NPC_ACTIONS,
-        ),
-        ScriptConfiguration(
-            name = "rocks1",
-            description = "ALL ACTIONS?",
-            optionType = OptionType.GAME_ACTIONS,
-        ),
-        ScriptConfiguration(
-            name = "rocks2",
-            description = "Want to have 0?",
-            optionType = OptionType.BOOLEAN,
-            defaultValue = "true"
-        ),
-        ScriptConfiguration(
-            name = "rocks3",
-            description = "Select",
-            optionType = OptionType.STRING,
-            defaultValue = "2",
-            allowedValues = ["1", "2", "3"]
-        ),
-    ]
+        [
+            ScriptConfiguration(
+                    name = "rocks",
+                    description = "Click som rocks",
+                    optionType = OptionType.GAMEOBJECT_ACTIONS,
+            ),
+            ScriptConfiguration(
+                    name = "Extra info",
+                    description = "Here comes extra info \n new lines?",
+                    optionType = OptionType.INFO
+            ),
+            ScriptConfiguration(
+                    name = "tile",
+                    description = "Get Tile?",
+                    optionType = OptionType.TILE,
+                    defaultValue = "{\"floor\":0,\"x\":1640,\"y\":3944,\"rendered\":true}"
+            ),
+            ScriptConfiguration(
+                    name = "rocks1",
+                    description = "NPCS?",
+                    optionType = OptionType.NPC_ACTIONS,
+            ),
+            ScriptConfiguration(
+                    name = "rocks1",
+                    description = "ALL ACTIONS?",
+                    optionType = OptionType.GAME_ACTIONS,
+            ),
+            ScriptConfiguration(
+                    name = "rocks2",
+                    description = "Want to have 0?",
+                    optionType = OptionType.BOOLEAN,
+                    defaultValue = "true"
+            ),
+            ScriptConfiguration(
+                    name = "rocks3",
+                    description = "Select",
+                    optionType = OptionType.STRING,
+                    defaultValue = "2",
+                    allowedValues = ["1", "2", "3"]
+            ),
+        ]
 )
 class TestScript : ATScript() {
     override fun createPainter(): ATPaint<*> = TestPainter(this)
@@ -83,20 +83,13 @@ class TestScript : ATScript() {
     var npc: Npc? = null
     var lastLoop = System.currentTimeMillis()
 
-    var ladder: GameObject? = null
     val points = mutableListOf<Point>()
 
 
     override val rootComponent: TreeComponent<*> = SimpleLeaf(this, "TestLeaf") {
-        ladder = Objects.stream().name("Rope ladder").action("Climb").firstOrNull()
-        points.clear()
-        log.info("Cleared points = ${points.size}")
-        (0 until 300).forEach {
-            ladder?.interactionType(ModelInteractionType.Model)?.nextPoint()?.let {
-                points.add(it)
-            }
-        }
-
+        val ladder = Objects.stream().name("Altar").first()
+//        points.clear()
+        log.info("Ladder= ${ladder}, tile=${ladder.tile}")
     }
 
     //Tile(x=3635, y=3362, floor=0)
@@ -130,25 +123,25 @@ class TestPainter(script: TestScript) : ATPaint<TestScript>(script) {
 
     override fun buildPaint(paintBuilder: PaintBuilder): Paint {
         return paintBuilder
-            .addString("Container") {
-                val comp = Widgets.component(718, 9)
-                "scrollY=${comp.scrollY()}, screenPoint=${comp.screenPoint()}"
-            }
-            .addString("Component1") {
-                val comp = Widgets.component(718, 9).component(85)
-                "screenPoint=${comp.screenPoint()}"
-            }
-            .build()
+                .addString("Container") {
+                    val comp = Widgets.component(718, 9)
+                    "scrollY=${comp.scrollY()}, screenPoint=${comp.screenPoint()}"
+                }
+                .addString("Component1") {
+                    val comp = Widgets.component(718, 9).component(85)
+                    "screenPoint=${comp.screenPoint()}"
+                }
+                .build()
     }
 
     override fun paintCustom(g: Rendering) {
         g.setColor(Color.RED)
-        val ladder = script.ladder ?: return
-        ladder.model()?.draw(ladder.localX(), ladder.localY())
+//        val ladder = script.ladder ?: return
+//        ladder.model()?.draw(ladder.localX(), ladder.localY())
 //        script.points.forEach {
 //            g.drawRect(it.x - 1, it.y - 1, 2, 2)
 //        }
-        script.log.info("Points=${script.points.size}")
+//        script.log.info("Points=${script.points.size}")
     }
 
     fun Tile.toWorld(): Tile {

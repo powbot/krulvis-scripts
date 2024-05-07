@@ -17,7 +17,7 @@ import org.powbot.krulvis.nmz.tree.branch.OutsideNMZ
 @ScriptManifest(
         name = "krul NMZ",
         author = "Krulvis",
-        version = "1.0.1",
+        version = "1.0.3",
         description = "Nightmarezone: Sips all potions, guzzles rock cake and flicks rapid heal"
 )
 @ScriptConfiguration.List(

@@ -68,7 +68,7 @@ class TemporossDebug : ATScript() {
                     tempoross.side = if (mast.orientation() == 4) Side.SOUTH else Side.NORTH
                     tempoross.side.mastLocation = mast.tile()
                 }
-            } else if (tempoross.getEnergy() == -1) {
+            } else if (tempoross.energy == -1) {
                 log.info("Not in game...")
                 tempoross.side = Side.UNKNOWN
             } else {
@@ -92,7 +92,7 @@ class TemporossDebug : ATScript() {
                 tether = tempoross.getTetherPole()
 
                 tempoross.collectFishSpots()
-                tempoross.bestFishSpot = tempoross.getFishSpot(tempoross.fishSpots)
+                tempoross.bestFishSpot = tempoross.getClosestFishSpot(tempoross.fishSpots)
 //                checkPaths(bucket, tether)
 //                checkPaths(ammo, tempoross.bestFishSpot)
 //                tempoross.hasDangerousPath(tempoross.side.bossWalkLocation)
@@ -173,7 +173,7 @@ class TemporossDebugPainter(script: TemporossDebug) : ATPaint<TemporossDebug>(sc
             .addString("Animation: ") { me.animation().toString() }
             .addString("Destination: ") { Movement.destination().toString() }
             .addString("Tethering: ") { script.tempoross.isTethering().toString() }
-            .addString({ "Energy: ${script.tempoross.getEnergy()}" }, { "Health: ${script.tempoross.getHealth()}" })
+            .addString({ "Energy: ${script.tempoross.energy}" }, { "Health: ${script.tempoross.health}" })
             .build()
     }
 

@@ -9,7 +9,7 @@ import org.powbot.mobile.script.ScriptManager
 class EnterDream(script: NightmareZone) : Leaf<NightmareZone>(script, "Entering Dream") {
     override fun execute() {
         val nmzWidget = nightmareZoneWidget()
-        val potion = drinkablePotion()
+        val dreamPotion = dreamPotion()
         val rumbleSelector = rumbleSelector()
         val agreeComponent = agreeComponent()
         if (outOfMoney()) {
@@ -18,8 +18,8 @@ class EnterDream(script: NightmareZone) : Leaf<NightmareZone>(script, "Entering 
         } else if (nmzWidget != null) {
             if (nmzWidget.click())
                 Utils.waitFor(5000) { !script.outsideNMZ() }
-        } else if (potion != null) {
-            if (potion.interact("Drink")) {
+        } else if (dreamPotion != null) {
+            if (dreamPotion.interact("Drink")) {
                 Utils.waitFor { nightmareZoneWidget() != null }
             }
         } else if (rumbleSelector != null) {
@@ -33,7 +33,7 @@ class EnterDream(script: NightmareZone) : Leaf<NightmareZone>(script, "Entering 
         } else if (agreeComponent != null) {
             script.log.info("Agree component up..")
             if (agreeComponent.parent().component(1).click())
-                Utils.waitFor { drinkablePotion() != null }
+                Utils.waitFor { dreamPotion() != null }
         } else if (Objects.stream().name("Empty Vial").isNotEmpty()) {
             script.log.info("Couldn't find component ${Widgets.component(219, 1, 4).text()}")
             Npcs.stream().name("Dominic Onion").firstOrNull()?.interact("Dream")
@@ -46,5 +46,5 @@ class EnterDream(script: NightmareZone) : Leaf<NightmareZone>(script, "Entering 
     private fun rumbleSelector() = Components.stream(219, 1).text("Previous:").firstOrNull()
     private fun nightmareZoneWidget() = Components.stream(129, 6).text("Accept").firstOrNull()
 
-    private fun drinkablePotion() = Objects.stream().name("Potion").action("Drink").firstOrNull()
+    private fun dreamPotion() = Objects.stream().name("Potion").action("Drink").firstOrNull()
 }

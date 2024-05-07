@@ -20,9 +20,6 @@ class Pickpocket(script: Thiever) : Leaf<Thiever>(script, "Pickpocket") {
         if (target != null && Bank.close()) {
             val xp = Skills.experience(Constants.SKILLS_THIEVING)
             if (walkAndInteract(target, "Pickpocket", script.useMenu)) {
-                script.lastTile = target.tile()
-                if (script.startNPCTile == Tile.Nil)
-                    script.startNPCTile = script.lastTile
                 if (waitFor(Random.nextInt(1000, 1250)) {
                         Skills.experience(Constants.SKILLS_THIEVING) > xp ||
                                 script.stunned()

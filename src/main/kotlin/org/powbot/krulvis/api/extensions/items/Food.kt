@@ -9,6 +9,10 @@ import org.powbot.krulvis.api.ATContext.missingHP
 import java.io.Serializable
 import kotlin.math.ceil
 
+const val TUNA = "TUNA"
+const val LOBSTER = "LOBSTER"
+const val BASS = "BASS"
+const val SALMON = "SALMON"
 enum class Food(val healing: Int, override vararg val ids: Int) : Item, Serializable {
 
     SHRIMP(3, 315),

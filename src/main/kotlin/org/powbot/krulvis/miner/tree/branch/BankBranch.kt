@@ -67,10 +67,12 @@ class ShouldBank(script: Miner) : Branch<Miner>(script, "Should Bank") {
         val full = Inventory.isFull()
         return full || Bank.opened() || DepositBox.opened()
                 || ((script.waterskins || Data.hasEmptyWaterSkin()) && !Data.hasWaterSkins())
-                || (script.shouldEmptySack
-                && !Inventory.emptyExcept(*Data.TOOLS)
-                && (full || script.getMotherloadCount() == 0))
+                || shouldBankMotherload()
     }
+
+    fun shouldBankMotherload() = script.shouldEmptySack
+            && !Inventory.emptyExcept(*Data.TOOLS)
+            && script.getMotherloadCount() == 0
 
     override val successComponent: TreeComponent<Miner> = ShouldDrop(script)
     override val failedComponent: TreeComponent<Miner> = ShouldEmptySack(script)
@@ -135,7 +137,7 @@ class HasSandstone(script: Miner) : Branch<Miner>(script, "Has sandstone") {
     override fun validate(): Boolean {
         return Inventory.containsOneOf(*Ore.SANDSTONE.ids) &&
                 Objects.stream(50).type(GameObject.Type.INTERACTIVE).name("Grinder").action("Deposit")
-                    .isNotEmpty()
+                        .isNotEmpty()
     }
 
     override val successComponent: TreeComponent<Miner> = DropSandstone(script)
@@ -149,11 +151,5 @@ class IsBankOpen(script: Miner) : Branch<Miner>(script, "Is Bank open") {
     }
 
     override val successComponent: TreeComponent<Miner> = HandleBank(script)
-    override val failedComponent: TreeComponent<Miner> = SimpleLeaf(script, "OpenBank") {
-        GemBag.empty = false
-        if (script.escapeTopFloor()) {
-            if (script.useDepositBox) DepositBox.openNearestDB()
-            else Bank.openNearest()
-        }
-    }
+    override val failedComponent: TreeComponent<Miner> = OpenBank(script)
 }

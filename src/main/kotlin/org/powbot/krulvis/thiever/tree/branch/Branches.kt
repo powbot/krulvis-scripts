@@ -60,7 +60,7 @@ class CanDrop(script: Thiever) : Branch<Thiever>(script, "Can drop") {
 
 
 class ShouldOpenCoinPouch(script: Thiever, nextNode: TreeComponent<Thiever>, private val stackSize: Int) :
-    Branch<Thiever>(script, "Should Bank") {
+        Branch<Thiever>(script, "Should Bank") {
     override val successComponent: TreeComponent<Thiever> = OpenPouch(script)
     override val failedComponent: TreeComponent<Thiever> = nextNode
 
@@ -84,18 +84,18 @@ class AtSpot(script: Thiever) : Branch<Thiever>(script, "AtSpot?") {
     override val successComponent: TreeComponent<Thiever> = ShouldStop(script)
     override val failedComponent: TreeComponent<Thiever> = SimpleLeaf(script, "Walking") {
         Bank.close()
-        if (Players.local().tile().floor > 0) {
+        if (Players.local().tile().floor > 0 && script.centerTile.floor == 0) {
             script.log.info("Climbing down first...")
             if (walkAndInteract(Objects.stream().action("Climb-down").nearest().firstOrNull(), "Climb-down")) {
                 waitFor(long()) { validate() }
             }
         } else {
-            Movement.walkTo(script.lastTile)
+            Movement.walkTo(script.centerTile)
         }
     }
 
     override fun validate(): Boolean {
-        return (script.lastTile == Tile.Nil || script.lastTile.distance() <= 10)
+        return script.centerTile.distance() <= script.maxDistance
                 && (script.getTarget()?.distance()?.roundToInt() ?: 99) < 20
     }
 }
@@ -103,7 +103,7 @@ class AtSpot(script: Thiever) : Branch<Thiever>(script, "AtSpot?") {
 class ShouldStop(script: Thiever) : Branch<Thiever>(script, "Should stop?") {
     override val successComponent: TreeComponent<Thiever> = SimpleLeaf(script, "Stop because npc wandered") {
         Notifications.showNotification("Stopping script because NPC wandered too far away")
-        script.log.info("Stopping script because NPC wandered too far away \n NPC: $target, tile=${target?.tile()}, startTile=${script.startNPCTile}")
+        script.log.info("Stopping script because NPC wandered too far away \n NPC: $target, tile=${target?.tile()}, centerTile=${script.centerTile}, distance=${target?.distanceTo(script.centerTile)}")
         ScriptManager.stop()
     }
     override val failedComponent: TreeComponent<Thiever> = Pickpocket(script)
@@ -111,8 +111,8 @@ class ShouldStop(script: Thiever) : Branch<Thiever>(script, "Should stop?") {
     var target: Npc? = null
 
     override fun validate(): Boolean {
-        if (!script.stopOnWander || script.startNPCTile == Tile.Nil) return false
+        if (!script.stopOnWander || script.centerTile == Tile.Nil) return false
         target = script.getTarget()
-        return (target?.tile()?.distanceTo(script.startNPCTile) ?: 99).toInt() >= script.wanderRange
+        return (target?.tile()?.distanceTo(script.centerTile) ?: 99).toInt() >= script.maxDistance
     }
 }

@@ -101,7 +101,12 @@ class IsMining(script: Miner) : Branch<Miner>(script, "IsMining") {
 
 
     override fun validate(): Boolean {
-        if (Objects.stream().at(facingTile()).noneMatch { it.hasOre() }) {
+        val facingObjects = Objects.stream().at(facingTile()).toList()
+        if (facingObjects.none { it.hasOre() }) {
+            return false
+        }
+        val bestRock = script.getBestRock()
+        if (bestRock?.name == "Calcified rocks" && bestRock !in facingObjects) {
             return false
         }
         return if (me.animation() > 0) {

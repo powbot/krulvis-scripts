@@ -37,30 +37,6 @@ abstract class ATScript : TreeScript() {
         if (rh != null) rh.execute() else super.poll()
     }
 
-    /**
-     * Returns the actual script's settings files
-     */
-    fun getSettingsFiles(): Array<out File> {
-        val settingsFolder = settingsFolder()
-        if (settingsFolder.exists()) {
-            return settingsFolder.listFiles()!!
-        }
-        return emptyArray()
-    }
-
-    /**
-     * Powbot folder
-     */
-    fun powbotFolder() = System.getProperty("user.home") + File.separator + ".powbot"
-
-    /**
-     * Returns a Folder where the current script's settings have to be stored/loaded from
-     */
-    fun settingsFolder(): File {
-        val pb = powbotFolder()
-        return File(pb + File.separator + "ScriptSettings" + File.separator + manifest.name)
-    }
-
     @com.google.common.eventbus.Subscribe
     fun onRender(e: RenderEvent) {
         painter.paintCustom(Rendering)

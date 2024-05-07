@@ -5,6 +5,7 @@ import org.powbot.api.Tile
 import org.powbot.api.script.tree.Leaf
 import org.powbot.krulvis.api.ATContext
 import org.powbot.krulvis.api.ATContext.debug
+import org.powbot.krulvis.api.ATContext.distance
 import org.powbot.krulvis.api.ATContext.walk
 import org.powbot.krulvis.api.utils.Utils.long
 import org.powbot.krulvis.api.utils.Utils.waitFor
@@ -24,13 +25,11 @@ class EnterBoat(script: Tempoross) : Leaf<Tempoross>(script, "Entering boat") {
             return
         }
         val ropeLadder = script.getLadder()
-        if ((ropeLadder?.distance()?.roundToInt() ?: 6) > 5) {
+        ropeLadder?.bounds(41, 72, -384, -140, -52, 42)
+        if (ropeLadder == null || ropeLadder.distance() > 10 || !ropeLadder.inViewport()) {
             debug("Walking first")
             walk(Tile(3137, 2841, 0))
-        } else if (ropeLadder
-                        ?.interactionType(ModelInteractionType.HullQuick)
-                        ?.interact("Quick-climb") == true
-        ) {
+        } else if (ropeLadder.interact("Quick-climb")) {
             waitFor(long()) { BOAT_AREA.contains(ATContext.me.tile()) }
         }
     }

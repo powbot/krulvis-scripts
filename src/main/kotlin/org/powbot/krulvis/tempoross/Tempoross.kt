@@ -2,17 +2,17 @@ package org.powbot.krulvis.tempoross
 
 import com.google.common.eventbus.Subscribe
 import org.powbot.api.InteractableEntity
+import org.powbot.api.Locatable
 import org.powbot.api.Tile
 import org.powbot.api.event.BreakEvent
 import org.powbot.api.event.MessageEvent
 import org.powbot.api.event.PaintCheckboxChangedEvent
+import org.powbot.api.event.TickEvent
 import org.powbot.api.rt4.*
 import org.powbot.api.rt4.walking.local.LocalPath
 import org.powbot.api.rt4.walking.local.LocalPathFinder
-import org.powbot.api.script.OptionType
-import org.powbot.api.script.ScriptCategory
-import org.powbot.api.script.ScriptConfiguration
-import org.powbot.api.script.ScriptManifest
+import org.powbot.api.rt4.walking.local.nodes.LocalEdge
+import org.powbot.api.script.*
 import org.powbot.api.script.tree.TreeComponent
 import org.powbot.krulvis.api.ATContext.containsOneOf
 import org.powbot.krulvis.api.ATContext.getWalkableNeighbor
@@ -20,45 +20,75 @@ import org.powbot.krulvis.api.ATContext.me
 import org.powbot.krulvis.api.ATContext.walk
 import org.powbot.krulvis.api.ATContext.walkAndInteract
 import org.powbot.krulvis.api.extensions.items.Item.Companion.BUCKET_OF_WATER
+import org.powbot.krulvis.api.extensions.items.Item.Companion.EMPTY_BUCKET
+import org.powbot.krulvis.api.extensions.items.Item.Companion.HAMMER
+import org.powbot.krulvis.api.extensions.items.Item.Companion.IMCANDO_HAMMER
+import org.powbot.krulvis.api.extensions.items.Item.Companion.ROPE
 import org.powbot.krulvis.api.script.ATScript
 import org.powbot.krulvis.api.script.painter.ATPaint
 import org.powbot.krulvis.api.utils.Timer
 import org.powbot.krulvis.api.utils.Utils.long
 import org.powbot.krulvis.api.utils.Utils.waitFor
-import org.powbot.krulvis.tempoross.Data.COOKED
 import org.powbot.krulvis.tempoross.Data.DOUBLE_FISH_ID
-import org.powbot.krulvis.tempoross.Data.PARENT_WIDGET
-import org.powbot.krulvis.tempoross.Data.RAW
+import org.powbot.krulvis.tempoross.Data.HARPOON
 import org.powbot.krulvis.tempoross.Data.WAVE_TIMER
 import org.powbot.krulvis.tempoross.tree.branch.ShouldEnterBoat
 import org.powbot.krulvis.tempoross.tree.leaf.EnterBoat
 import org.powbot.krulvis.tempoross.tree.leaf.Leave
+import kotlin.math.roundToInt
 
 @ScriptManifest(
         name = "krul Tempoross",
         description = "Does tempoross minigame",
-        version = "1.2.7",
+        version = "1.3.4",
         author = "Krulvis",
+        scriptId = "54b4c295-8cb8-4c22-9799-49b7344708e7",
         markdownFileName = "Tempoross.md",
         category = ScriptCategory.Fishing
 )
 @ScriptConfiguration.List(
         [
             ScriptConfiguration(
-                    name = "Cook fish",
-                    description = "Cooking the fish gives more points at the cost of XP",
-                    defaultValue = "true",
-                    optionType = OptionType.BOOLEAN
-            ),
-            ScriptConfiguration(
-                    name = "Special Attack",
-                    description = "Do Dragon Harpoon special",
+                    name = UI.LOOTING,
+                    description = "Loot the reward pool",
                     defaultValue = "false",
                     optionType = OptionType.BOOLEAN
             ),
             ScriptConfiguration(
-                    name = "Barb fishing",
-                    description = "Barbarian fishing",
+                    name = UI.EQUIPMENT,
+                    description = "What gear and harpoon to equip",
+                    defaultValue = """{"25592":0,"21028":3,"25594":4,"25596":7,"25598":10}""",
+                    optionType = OptionType.EQUIPMENT
+            ),
+            ScriptConfiguration(
+                    name = "info",
+                    description = "Inventory setup for Tempoross: " +
+                            "\n- Amount of buckets" +
+                            "\n- Harpoon (if not equipped and not barb. fishing)" +
+                            "\n- (Imcando) hammer",
+                    optionType = OptionType.INFO
+            ),
+            ScriptConfiguration(
+                    name = UI.INVENTORY,
+                    description = "What items to take in inventory",
+                    defaultValue = """{"$BUCKET_OF_WATER": 5, "$HAMMER": 1}""",
+                    optionType = OptionType.INVENTORY
+            ),
+            ScriptConfiguration(
+                    name = UI.SOLO_METHOD,
+                    description = "Solo method with 19 cooked fish",
+                    defaultValue = "false",
+                    optionType = OptionType.BOOLEAN
+            ),
+            ScriptConfiguration(
+                    name = UI.COOK_FISH,
+                    description = "Cooking the fish gives more points (reward) at the cost of XP",
+                    defaultValue = "true",
+                    optionType = OptionType.BOOLEAN
+            ),
+            ScriptConfiguration(
+                    name = UI.SPECIAL_ATTACK,
+                    description = "Do Dragon/Inferno Harpoon special",
                     defaultValue = "false",
                     optionType = OptionType.BOOLEAN
             ),
@@ -67,35 +97,85 @@ import org.powbot.krulvis.tempoross.tree.leaf.Leave
 class Tempoross : ATScript() {
     override val rootComponent: TreeComponent<*> = ShouldEnterBoat(this)
 
+    @ValueChanged(UI.SOLO_METHOD)
+    fun onValueChanged(solo: Boolean) {
+        if (solo) {
+            updateOption(UI.COOK_FISH, true, OptionType.BOOLEAN)
+        }
+        updateVisibility(UI.COOK_FISH, !solo)
+    }
+
     override fun createPainter(): ATPaint<*> {
         return TemporossPaint(this)
     }
 
     val waveTimer = Timer(0)
     var side = Side.UNKNOWN
-    var forcedShooting = false
     val burningTiles = mutableListOf<Tile>()
     val triedPaths = mutableListOf<LocalPath>()
-    var profile = TemporossProfile()
     var rewardGained = 0
     var pointsObtained = 0
     var rounds = 0
     var lastGame = false
     var debugPaint = false
+    var vulnerableStartHP = 100
     var bestFishSpot: Npc? = null
     var fishSpots: List<Pair<Npc, LocalPath>> = emptyList()
-    val hasOutfit by lazy { Equipment.stream().id(25592, 25594, 25596, 25598).count().toInt() == 4 }
+    val hasSpiritOutfit by lazy { intArrayOf(25592, 25594, 25596, 25598).all { it in equipment.keys } }
 
-    val barbFishing by lazy { getOption<Boolean>("Barb fishing") }
-    val cookFish by lazy { getOption<Boolean>("Cook fish") }
-    val spec by lazy { getOption<Boolean>("Special Attack") }
+    val cookFish by lazy { getOption<Boolean>(UI.COOK_FISH) }
+    val spec by lazy { getOption<Boolean>(UI.SPECIAL_ATTACK) }
+    val equipment by lazy { getOption<Map<Int, Int>>(UI.EQUIPMENT) }
+    val inventory by lazy { getOption<Map<Int, Int>>(UI.INVENTORY) }
+    val solo by lazy { getOption<Boolean>(UI.SOLO_METHOD) }
+    val buckets by lazy {
+        if (solo) 5 else inventory.filter {
+            it.key in intArrayOf(
+                    BUCKET_OF_WATER,
+                    EMPTY_BUCKET
+            )
+        }.values.sum()
+    }
+    val inventoryBankItems by lazy {
+        inventory.filterNot {
+            it.key in intArrayOf(
+                    BUCKET_OF_WATER,
+                    EMPTY_BUCKET,
+                    ROPE,
+                    HARPOON,
+                    HAMMER
+            )
+        }
+    }
+
+    var intensity = -1
+        private set
+    var energy = -1
+        private set
+    var health = -1
+        private set
+
+    @Subscribe
+    fun onGameTick(_e: TickEvent) {
+        intensity = Data.getIntensity()
+        energy = Data.getEnergy()
+        health = Data.getHealth()
+    }
+
+    fun cookedToSubdue() = Math.round(energy / 5.625)
+
+    fun getNearestFire() = Npcs.stream().within(9).within(side.area).name("Fire").nearest().firstOrNull()
+    fun getRelevantInventoryItems(): Map<Int, Int> =
+            Inventory.stream().filtered { it.id in inventory.keys }
+                    .groupBy { it.id }
+                    .mapValues { it.value.sumOf { i -> i.stack } }
 
     fun hasDangerousPath(end: Tile): Boolean {
         val path = LocalPathFinder.findPath(end)
         return containsDangerousTile(path)
     }
 
-    fun containsDangerousTile(path: LocalPath): Boolean {
+    private fun containsDangerousTile(path: LocalPath): Boolean {
         triedPaths.add(path)
         return path.actions.any { burningTiles.contains(it.destination) }
     }
@@ -111,7 +191,9 @@ class Tempoross : ATScript() {
             if (destinationWhenNil != Tile.Nil) {
                 val path = LocalPathFinder.findPath(destinationWhenNil)
                 if (path.isNotEmpty() && douseIfNecessary(path, allowCrossing)) {
-                    walkPath(path)
+                    if (walkPath(path)) {
+                        getTrash()?.interact("Drop")
+                    }
                 } else {
                     log.info(if (path.isEmpty()) "Path is empty" else "failed dousing")
                     walk(destinationWhenNil)
@@ -133,19 +215,27 @@ class Tempoross : ATScript() {
 
     fun walkWhileDousing(path: LocalPath, allowCrossing: Boolean): Boolean {
         if (douseIfNecessary(path, allowCrossing)) {
-            return walkPath(path)
+            if (!walkPath(path)) {
+                return false
+            }
+            getTrash()?.interact("Drop")
         }
         return true
     }
 
-    /**
-     * @param allowCrossing
-     */
-    fun douseIfNecessary(path: LocalPath, allowCrossing: Boolean = false): Boolean {
+    private fun getTrash(): Item? {
+        val inventory = Inventory.stream().toList().groupBy { it.id }.mapValues { ig -> ig.value.sumOf { it.stack } }
+        val totalBuckets = inventory.getOrDefault(EMPTY_BUCKET, 0) + inventory.getOrDefault(BUCKET_OF_WATER, 0)
+        if (inventory.getOrDefault(HAMMER, 0) > 1) {
+            return Inventory.stream().id(HAMMER).firstOrNull()
+        } else if (totalBuckets > buckets)
+            return Inventory.stream().id(EMPTY_BUCKET, BUCKET_OF_WATER).firstOrNull()
+        return null
+    }
+
+    private fun douseIfNecessary(path: LocalPath, allowCrossing: Boolean = false): Boolean {
         val blockedTile = path.actions.firstOrNull { burningTiles.contains(it.destination) }
-        val fire =
-                if (blockedTile != null) Npcs.stream().name("Fire").nearest(blockedTile.destination)
-                        .firstOrNull() else null
+        val fire = blockedTile?.getFire()
         val hasBucket = Inventory.containsOneOf(BUCKET_OF_WATER)
         log.info("Blockedtile: $blockedTile fire: $fire, Bucket: $hasBucket")
         if (fire != null && hasBucket) {
@@ -168,7 +258,9 @@ class Tempoross : ATScript() {
         return false
     }
 
-    fun walkPath(path: LocalPath): Boolean {
+    private fun LocalEdge.getFire(): Npc? = Npcs.stream().name("Fire").nearest(destination).firstOrNull()
+
+    private fun walkPath(path: LocalPath): Boolean {
         if (path.isEmpty()) {
             return false
         }
@@ -183,30 +275,17 @@ class Tempoross : ATScript() {
         }
     }
 
+    fun isVulnerable(): Boolean = energy in 0..2 || getBossPool() != null
+
+    fun isLowHP(): Boolean = health <= if (solo) 33 else 5
+
+    fun isTethering(): Boolean = (Varpbits.varpbit(2933) and 1) == 1
+
+
     override fun canBreak(): Boolean {
         val canBreak = lastLeaf is EnterBoat || lastLeaf is Leave
         log.info("canBreak() lastLeaf=${lastLeaf.name} canBreak=${canBreak}")
         return canBreak
-    }
-
-    fun canKill(): Boolean = getEnergy() in 0..2 || getBossPool() != null
-
-    fun isTethering(): Boolean = (Varpbits.varpbit(2933) xor 7 and 7) != 7
-
-    fun getEnergy(): Int {
-        val text =
-                Widgets.widget(PARENT_WIDGET).firstOrNull { it != null && it.visible() && it.text().contains("Energy") }
-                        ?.text()
-                        ?: return -1
-        return text.substring(8, text.indexOf("%")).toInt()
-    }
-
-    fun getHealth(): Int {
-        val text =
-                Widgets.widget(PARENT_WIDGET).firstOrNull { it != null && it.visible() && it.text().contains("Essence") }
-                        ?.text()
-                        ?: return -1
-        return text.substring(9, text.indexOf("%")).toInt()
     }
 
     @Subscribe
@@ -218,8 +297,7 @@ class Tempoross : ATScript() {
 
     @Subscribe
     fun onMessageEvent(me: MessageEvent?) {
-        val me = me ?: return
-        if (me.type != 0) {
+        if (me == null || me.type != 0) {
             return
         }
         val txt = me.message
@@ -229,19 +307,29 @@ class Tempoross : ATScript() {
             log.info("Finished round, gained: $points points")
             pointsObtained += points
             rounds++
+        } else if (txt.contains("Tempoross is vulnerable!")) {
+            vulnerableStartHP = health
         } else if (txt.contains("A colossal wave closes in...")) {
             log.info("Should tether wave coming in!")
             waveTimer.reset(WAVE_TIMER)
-            val fishId = if (cookFish) COOKED else RAW
-            val fish = Inventory.stream().id(fishId).count()
-            if (profile.shootAfterTethering && (fish >= profile.minFishToForceShoot || fish >= getHealth())) {
-                forcedShooting = true
-            }
+//            val fishId = if (cookFish) COOKED else RAW
+//            val fish = Inventory.stream().id(fishId).count()
+//            if (fish >= 15 || fish >= getHealth()) {
+//                forcedShooting = true
+//            }
+        } else if (isWaveOver(txt)) {
+            log.info("Wave is over")
+            waveTimer.stop()
         } else if (txt.contains("Reward permits: ") && txt.contains("Total permits:")) {
             val reward = txt.substring(28, txt.indexOf("</col>")).toInt()
             log.info("Gained $reward points")
             rewardGained += reward
         }
+    }
+
+    private fun isWaveOver(msg: String): Boolean {
+        return msg.contains("...the rope keeps you securely upright as the wave washes over you")
+                || msg.contains("...the wave slams into you, knocking you to the ground.")
     }
 
     @com.google.common.eventbus.Subscribe
@@ -254,11 +342,12 @@ class Tempoross : ATScript() {
     }
 
 
-    fun rightSide(spot: Npc): Boolean {
+    private fun Npc.rightSide(): Boolean {
+        val y = tile().y
         return if (side == Side.NORTH) {
-            spot.tile().y() > side.mastLocation.y()
+            y > side.mastLocation.y()
         } else {
-            spot.tile().y() < side.mastLocation.y()
+            y < side.mastLocation.y()
         }
     }
 
@@ -286,40 +375,51 @@ class Tempoross : ATScript() {
     }
 
     fun collectFishSpots() {
-        fishSpots = Npcs.stream().filtered {
-            rightSide(it)
-        }.action("Harpoon").name("Fishing spot").list()
+        fishSpots = Npcs.stream().filtered { it.rightSide() }
+                .action("Harpoon").name("Fishing spot").list()
                 .map { Pair(it, LocalPathFinder.findPath(it.tile().getWalkableNeighbor())) }
     }
 
-    fun getFishSpot(spots: List<Pair<Npc, LocalPath>>): Npc? {
-        val paths = spots.filter { !containsDangerousTile(it.second) }
-        val doublePath = paths.filter { it.first.id() == DOUBLE_FISH_ID }.firstOrNull()
+    fun getClosestFishSpot(spots: List<Pair<Npc, LocalPath>>): Npc? {
+        val doublePath = spots.firstOrNull { it.first.id() == DOUBLE_FISH_ID }
         if (doublePath != null) {
             return doublePath.first
         }
 
-        if (paths.isNotEmpty()) {
-            return paths.minByOrNull { it.second.actions.size }!!.first
-        }
-        return null
+        return spots.filter { !containsDangerousTile(it.second) }.minByOrNull { it.second.actions.size }?.first
     }
 
     fun getBossPool() =
             Npcs.stream().at(side.bossPoolLocation).action("Harpoon").name("Spirit pool").firstOrNull()
 
     fun getAmmoCrate(): Npc? =
-            Npcs.stream().filtered { it.tile().distanceTo(side.mastLocation) <= 5 }.name("Ammunition crate").firstOrNull()
+            Npcs.stream().name("Ammunition crate").firstOrNull { it.atCorrectSide() }
+
+    fun atAmmoCrate(): Boolean {
+        val ammoCrate = getAmmoCrate()
+        return (ammoCrate?.distance()?.roundToInt() ?: 3) <= 2
+    }
+
+    fun hasHammer() = Inventory.containsOneOf(HAMMER, IMCANDO_HAMMER)
+    fun getHammerContainer(): GameObject? = Objects.stream()
+            .type(GameObject.Type.INTERACTIVE).name("Hammers")
+            .firstOrNull { it.atCorrectSide() }
+
+    fun getRopeContainer(): GameObject? = Objects.stream(50)
+            .type(GameObject.Type.INTERACTIVE)
+            .name("Ropes")
+            .firstOrNull { it.atCorrectSide(6) }
 
     fun getBucketCrate(): GameObject? =
-            Objects.stream(50).type(GameObject.Type.INTERACTIVE).filtered {
-                it.tile().distanceTo(side.mastLocation) <= 5 || it.tile().distanceTo(side.bossPoolLocation) <= 5
-            }.name("Buckets").nearest().firstOrNull()
+            Objects.stream(50).type(GameObject.Type.INTERACTIVE).name("Buckets").nearest().firstOrNull()
 
     fun getWaterpump(): GameObject? =
-            Objects.stream(50).type(GameObject.Type.INTERACTIVE).filtered {
-                it.tile().distanceTo(side.mastLocation) <= 5 || it.tile().distanceTo(side.bossPoolLocation) <= 5
-            }.name("Water pump").nearest().firstOrNull()
+            Objects.stream(50).type(GameObject.Type.INTERACTIVE).name("Water pump").nearest().firstOrNull()
+
+    private fun Locatable.atCorrectSide(distance: Int = 5): Boolean {
+        val tile = tile()
+        return tile.distanceTo(side.mastLocation) <= distance || tile.distanceTo(side.bossPoolLocation) <= distance
+    }
 
     fun getTetherPole(): GameObject? {
         val dest = Movement.destination()
@@ -331,6 +431,10 @@ class Tempoross : ATScript() {
     }
 
     fun getLadder(): GameObject? = Objects.stream().name("Rope ladder").action("Climb").firstOrNull()
+
+    fun getEmptyBuckets(): Int = Inventory.stream().id(EMPTY_BUCKET).count().toInt()
+    fun getFilledBuckets(): Int = Inventory.stream().id(BUCKET_OF_WATER).count().toInt()
+    fun getTotalBuckets(): Int = Inventory.stream().id(EMPTY_BUCKET, BUCKET_OF_WATER).count().toInt()
 }
 
 fun main() {

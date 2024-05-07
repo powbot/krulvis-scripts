@@ -8,14 +8,15 @@ import java.util.*
 
 
 enum class Ore(
-    override val ids: IntArray,
-    val miningLvl: Int,
-    //settingId & shiftAmount are used in Blast furnace
-    val settingId: Int,
-    val shiftAmount: Int,
-    vararg val colors: Int
+        override val ids: IntArray,
+        val miningLvl: Int,
+        //settingId & shiftAmount are used in Blast furnace
+        val settingId: Int,
+        val shiftAmount: Int,
+        vararg val colors: Int
 ) : Item {
     AMETHYST(intArrayOf(21347), 92, -1, -1, 6705),
+    CALCIFIED(intArrayOf(29088), 41, -1, -1, 6705),
     PAY_DIRT(intArrayOf(12011), 45, -1, -1, 6705),
     VOLCANIC_ASH(intArrayOf(21622), 22, -1, -1, 6705),
     RUNITE(intArrayOf(451), 85, 548, 8, -31437),
@@ -33,7 +34,8 @@ enum class Ore(
     TE_SALT(intArrayOf(22593), 72, -1, -1, 960),
     EFH_SALT(intArrayOf(22595), 72, -1, -1, -22328),
     URT_SALT(intArrayOf(22597), 72, -1, -1, 21704),
-    BLURITE(intArrayOf(668), 1, -1, -1, 696969);
+    BLURITE(intArrayOf(668), 1, -1, -1, 696969),
+    SOFT_CLAY(intArrayOf(1761), 70, -1, -1, 7062);
 
     private val mask = 255
 
@@ -57,7 +59,7 @@ enum class Ore(
     companion object {
         fun GameObject.hasOre(vararg ores: Ore = values()): Boolean {
             val name = name()
-            val validNames = arrayOf("Ore vein", "Amethyst crystals", "Ash pile")
+            val validNames = arrayOf("Ore vein", "Amethyst crystals", "Ash pile", "Calcified rocks")
             return name in validNames || ores.any { ore -> ore.colors.any { it.toShort() in modifiedColors() } }
         }
 
